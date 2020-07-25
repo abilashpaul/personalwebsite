@@ -12,6 +12,17 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
 <!-- ^ where we link our font awesome file to our webpage (this allows us to import social icons!) -->
   </head>
+
+<style type="text/css">
+body {
+  background: #000000; 
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
+}
+</style>
   <body class = "dark">
     <iframe scrolling="no" frameborder="no" clocktype="html5" style="overflow:hidden;border:0;margin:0;padding:0;width:100px;height:100px;"src="https://www.clocklink.com/html5embed.php?clock=050&timezone=CST&color=kiwi&size=100&Title=&Message=&Target=&From=2020,1,1,0,0,0&Color=kiwi"></iframe>
     <h1>Abilash Paul </h1>
@@ -19,7 +30,177 @@
 <!-- ^ this is our document's body, we can write all our HTML markup here -->
 
 
+	
+<canvas id="waterfall"></canvas>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	
+  <script type="text/javascript">
+    
+    var waterfallCanvas = function(c, cw, ch){
+      
+      var _this = this;
+      this.c = c;
+      this.ctx = c.getContext('2d');
+      this.cw = cw;
+      this.ch = ch;     
+      
+      this.particles = [];
+      this.particleRate = 6;
+      this.gravity = .15;
+              
+
+      this.init = function(){       
+        this.loop();
+      };
+      
+      this.reset = function(){        
+        this.ctx.clearRect(0,0,this.cw,this.ch);
+        this.particles = [];
+      };
+            
+      this.rand = function(rMi, rMa){return ~~((Math.random()*(rMa-rMi+1))+rMi);};
+      
+
+      this.Particle = function(){
+        var newWidth = _this.rand(1,20);
+        var newHeight = _this.rand(1, 45);
+        this.x = _this.rand(10+(newWidth/2), _this.cw-10-(newWidth/2));
+        this.y = -newHeight;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = newWidth;
+        this.height = newHeight;
+        this.hue = _this.rand(200, 220);
+        this.saturation = _this.rand(30, 60);
+        this.lightness = _this.rand(30, 60);
+      };
+      
+      this.Particle.prototype.update = function(i){
+        this.vx += this.vx; 
+        this.vy += _this.gravity;
+        this.x += this.vx;
+        this.y += this.vy;              
+      };
+      
+      this.Particle.prototype.render = function(){      
+        _this.ctx.strokeStyle = 'hsla('+this.hue+', '+this.saturation+'%, '+this.lightness+'%, .05)';
+        _this.ctx.beginPath();
+        _this.ctx.moveTo(this.x, this.y);
+        _this.ctx.lineTo(this.x, this.y + this.height);
+        _this.ctx.lineWidth = this.width/2;
+        _this.ctx.lineCap = 'round';
+        _this.ctx.stroke();
+      };
+      
+      this.Particle.prototype.renderBubble = function(){        
+        _this.ctx.fillStyle = 'hsla('+this.hue+', 40%, 40%, 1)';
+        _this.ctx.fillStyle = 'hsla('+this.hue+', '+this.saturation+'%, '+this.lightness+'%, .3)';
+        _this.ctx.beginPath();
+        _this.ctx.arc(this.x+this.width/2, _this.ch-20-_this.rand(0,10), _this.rand(1,8), 0, Math.PI*2, false);
+        _this.ctx.fill();
+      };
+            
+      this.createParticles = function(){
+        var i = this.particleRate;
+        while(i--){
+          this.particles.push(new this.Particle());
+        }
+      };
+      
+      this.removeParticles = function(){
+        var i = this.particleRate;
+        while(i--){
+          var p = this.particles[i];
+          if(p.y > _this.ch-20-p.height){
+            p.renderBubble();
+            _this.particles.splice(i, 1);
+          } 
+        }
+      };
+              
+      this.updateParticles = function(){          
+        var i = this.particles.length;            
+        while(i--){
+          var p = this.particles[i];
+          p.update(i);                      
+        };            
+      };
+      
+      this.renderParticles = function(){
+        var i = this.particles.length;            
+        while(i--){
+          var p = this.particles[i];
+          p.render();                     
+        };          
+      };
+      
+      this.clearCanvas = function(){        
+        this.ctx.globalCompositeOperation = 'destination-out';
+          this.ctx.fillStyle = 'rgba(255,255,255,.06)';
+          this.ctx.fillRect(0,0,this.cw,this.ch);
+        this.ctx.globalCompositeOperation = 'lighter';
+      };
+      
+      this.loop = function(){
+        var loopIt = function(){          
+          requestAnimationFrame(loopIt, _this.c);         
+            _this.clearCanvas();          
+            _this.createParticles();          
+            _this.updateParticles();          
+            _this.renderParticles();  
+            _this.removeParticles();
+        };
+        loopIt();         
+      };
+    
+    };
+    
+  var isCanvasSupported = function(){
+    var elem = document.createElement('canvas');
+    return !!(elem.getContext && elem.getContext('2d'));
+  };
+  
+  var setupRAF = function(){
+    var lastTime = 0;
+    var vendors = ['ms', 'moz', 'webkit', 'o'];
+    for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x){
+      window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+      window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame'] || window[vendors[x]+'CancelRequestAnimationFrame'];
+    };
+    
+    if(!window.requestAnimationFrame){
+      window.requestAnimationFrame = function(callback, element){
+        var currTime = new Date().getTime();
+        var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+        var id = window.setTimeout(function() { callback(currTime + timeToCall); }, timeToCall);
+        lastTime = currTime + timeToCall;
+        return id;
+      };
+    };
+    
+    if (!window.cancelAnimationFrame){
+      window.cancelAnimationFrame = function(id){
+        clearTimeout(id);
+      };
+    };
+  };      
+  
+  if(isCanvasSupported()){
+      var c = document.getElementById('waterfall');
+      var cw = c.width = 100;
+      var ch = c.height = 140;  
+      var waterfall = new waterfallCanvas(c, cw, ch);       
+      setupRAF();
+      waterfall.init();
+  } 
+
+
+  </script>
+	
+      
     <script src="script.js"></script>
+
   <!-- ^ where we link our JS file to our webpage (we don't need to worry about this for now!) -->
   </body>
 </html>
